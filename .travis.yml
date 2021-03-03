@@ -1,0 +1,45 @@
+version: ~> 1.0
+language: node_js
+dist: bionic
+arch: arm64-graviton2
+
+git:
+  depth: 10
+
+branches:
+  only:
+    - main
+
+install: echo "Nope..."
+
+jobs:
+  allow_failures:
+    - stage: First
+  include:
+    - stage: First
+      name: "Test job creating and (re)using the same workspace"
+      before_script:
+        - ls -liA workspace-test || echo "no dir"
+        - cat ./workspace-test/file.txt || echo "no file"
+      script: ./test.sh && test $(cut -d ',' -f2 workspace-test/file.txt) == 3
+      after_script:
+        - ls -liA workspace-test
+        - cat ./workspace-test/file.txt
+      workspaces:
+        create:
+          name: workspace_test_cache
+          paths:
+            - "workspace-test"
+        use: workspace_test_cache
+
+    - stage: Second
+      name: "Test job only using a previously created workspace"
+      before_script:
+        - ls -liA workspace-test || echo "no dir"
+        - cat ./workspace-test/file.txt || echo "no file"
+      script: ./test.sh && test $(cut -d ',' -f2 workspace-test/file.txt) == 3
+      after_script:
+        - ls -liA workspace-test
+        - cat ./workspace-test/file.txt
+      workspaces:
+        use: workspace_test_cache
